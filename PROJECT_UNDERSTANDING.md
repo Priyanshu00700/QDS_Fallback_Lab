@@ -121,8 +121,8 @@ Decision flow for one message in "Signature + fallback" mode:
 Alice signs ─▶ Bob checks every digest-bit block against s_a
                  │ all pass ─▶ Dave checks against s_v ─ all pass ─▶ DELIVERED by QDS
                  │                                      └ any fail ┐
-                 └ fail, or nothing arrived ────────────────────────┤
-                                                                    ▼
+                 └ fail, or nothing arrived ───────────────────────┤
+                                                                   ▼
                             Bell pairs shared between Alice and Bob
                             CHSH S > 2.2  and  error rate ≤ 11% ?
                                  no ─▶ NOT DELIVERED (link tapped or too noisy; nothing forged accepted)
