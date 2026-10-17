@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QDS fallback lab</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%230b8a8f' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%23d3304a'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#eef2f0; --grid:#dbe3e0; --sheet:#fbfcfb; --ink:#172033; --dim:#55627a; --rule:#c6d0cd;
+  --teal:#0b8a8f; --blue:#3b5b92; --green:#2b8a5f; --laser:#d3304a;
+  --ok:#1f8a5b; --warn:#a96a08; --bad:#c9283d;
+  --sender:#2f6fd6; --receiver:#1f9a62; --validator:#7a4fc9; --attacker:#d3304a; --bystander:#7b8798;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:"Avenir Next","Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{margin:0;font:15px/1.5 var(--sans);color:var(--ink);background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:24px 24px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+
+.masthead{width:min(1400px,calc(100% - 32px));margin:0 auto;padding:22px 0 14px;display:flex;gap:16px 28px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap}
+h1{font:600 31px/1.1 var(--serif);letter-spacing:-.01em;margin:0 0 6px}
+.lede{margin:0;color:var(--dim);max-width:64ch}
+.badge{font-size:13px;padding:4px 11px;border:1px solid var(--rule);background:var(--sheet);border-radius:999px;color:var(--dim)}
+.badge.ok{color:var(--ok);border-color:#9bd0b8}
+
+.layout{width:min(1400px,calc(100% - 32px));margin:0 auto 48px;background:var(--sheet);border:1px solid var(--rule);display:grid;grid-template-columns:300px minmax(0,1fr) 318px}
+.col{padding:18px 20px;min-width:0}
+.col+.col{border-left:1px solid var(--rule)}
+h2{font:600 19px/1.2 var(--serif);margin:0 0 12px}
+h3{font:600 17px/1.25 var(--serif);margin:22px 0 8px}
+.hint{display:block;color:var(--dim);font-size:13px;margin:3px 0 0}
+
+input[type=text],input[type=number],select,textarea{width:100%;border:1px solid var(--rule);border-radius:3px;background:#fff;padding:7px 9px}
+select{padding-right:4px}
+.btn{border:1px solid var(--ink);background:var(--sheet);padding:8px 15px;border-radius:3px;font-weight:600;cursor:pointer}
+.btn:hover{background:#e9eeec}
+.btn.primary{background:var(--ink);color:#fff}
+.btn.primary:hover{background:#27344f}
+.btn:disabled{opacity:.5;cursor:default}
+.linkbtn{background:none;border:0;padding:0;color:var(--blue);text-decoration:underline;cursor:pointer;font-size:13px}
+
+/* users */
+.add{display:grid;grid-template-columns:1fr 112px;gap:8px}
+.add .btn{grid-column:1/-1}
+.users-list{list-style:none;margin:14px 0 8px;padding:0}
+.user{padding:11px 0;border-top:1px solid var(--rule)}
+.u-head{display:grid;grid-template-columns:12px 1fr 112px 26px;gap:8px;align-items:center}
+.dot{width:12px;height:12px;border-radius:50%}
+.u-head strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.x{border:0;background:none;font-size:20px;line-height:1;color:var(--dim);cursor:pointer;padding:0 4px}
+.x:hover{color:var(--bad)}
+.atk{margin:9px 0 0 20px;padding-left:12px;border-left:3px solid var(--laser);display:grid;gap:8px}
+.atk label{display:grid;gap:3px;font-size:13px;color:var(--dim)}
+.atk label.check{display:flex;gap:8px;align-items:center;color:var(--ink)}
+.atk .hint{margin:-4px 0 0}
+details.roles{margin-top:10px;font-size:13px;color:var(--dim)}
+details.roles dt{font-weight:600;color:var(--ink);margin-top:6px}
+details.roles dd{margin:0}
+
+/* stage */
+.sendbar{display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:end}
+.sendbar label{display:grid;gap:3px;font-size:13px;color:var(--dim)}
+.cast-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:14px 0 6px}
+.castsel{display:grid;gap:3px;font-size:13px;color:var(--dim);border-top:3px solid var(--c);padding-top:5px}
+.bench{border:1px solid var(--rule);background:#fff;margin-top:8px}
+#net{width:100%;height:auto;display:block}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0 0;font-size:13px;color:var(--dim)}
+.legend i{display:inline-block;width:30px;height:0;border-top:3px solid;vertical-align:middle;margin-right:6px}
+.legend .primary{border-color:var(--blue)}
+.legend .quantum{border-top-style:dashed;border-color:var(--teal)}
+.legend .backup{border-top-style:dotted;border-color:var(--green)}
+.link{fill:none;stroke-width:2.5}
+.link.primary{stroke:var(--blue)}
+.link.quantum{stroke:var(--teal);stroke-dasharray:7 5}
+.link.backup{stroke:var(--green);stroke-dasharray:2 6;stroke-linecap:round;stroke-width:3}
+.node .body{fill:#fff;stroke:var(--c);stroke-width:3}
+.node.small .body{stroke-width:2}
+.node .halo{fill:none;stroke:var(--c);stroke-opacity:.3;stroke-width:7}
+.node text{text-anchor:middle;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.node .init{font:700 19px var(--serif);fill:var(--c)}
+.node .nm{font:600 14px var(--sans);fill:var(--ink)}
+.node.small .nm{font-size:12px}
+.node .rl{font:12px var(--sans);fill:var(--dim)}
+#pkt{opacity:0;stroke:#fff;stroke-width:2}
+
+.verdict{--c:var(--dim);--tint:#eef1f4;margin:18px 0 4px;padding:14px 18px;border:2px solid var(--c);border-radius:4px;background:var(--tint);position:relative;transform:rotate(-.5deg);animation:thunk .2s ease-out}
+.verdict::after{content:"";position:absolute;inset:3px;border:1px solid var(--c);border-radius:2px;opacity:.45;pointer-events:none}
+.verdict h3{margin:0 0 4px;font:700 22px/1.2 var(--serif);color:var(--c)}
+.verdict p{margin:4px 0 0}
+.verdict .received{color:var(--dim)}
+.verdict .received q{color:var(--ink);font-weight:600}
+.lvl-ok{--c:var(--ok);--tint:#e7f4ed}
+.lvl-warn{--c:var(--warn);--tint:#fbf1de}
+.lvl-bad{--c:var(--bad);--tint:#fbe8ea}
+@keyframes thunk{from{transform:rotate(-.5deg) scale(1.05);opacity:.3}to{transform:rotate(-.5deg) scale(1);opacity:1}}
+.idle{margin:18px 0 4px;padding:14px 0;color:var(--dim);border-top:1px dashed var(--rule)}
+
+.cmp{width:100%;border-collapse:collapse;font-size:14px}
+.cmp th{text-align:left;font-weight:600;border-bottom:2px solid var(--ink);padding:6px 8px}
+.cmp td{border-bottom:1px solid var(--rule);padding:8px;vertical-align:top}
+.cmp tr.lvl-ok .out{color:var(--ok)} .cmp tr.lvl-warn .out{color:var(--warn)} .cmp tr.lvl-bad .out{color:var(--bad)}
+.cmp .out{font-weight:600}
+.rowbtn{background:none;border:0;padding:0;text-align:left;font-weight:600;color:var(--blue);text-decoration:underline;cursor:pointer}
+
+.fig{margin:10px 0 4px}
+.fig figcaption strong{display:block}
+.fig figcaption span{display:block;color:var(--dim);font-size:13px}
+.chart{width:100%;height:auto;display:block;margin-top:6px}
+.chart .grid{stroke:var(--rule)}
+.chart .tick{font:11px var(--sans);fill:var(--dim)}
+.chart .bar.pass{fill:var(--ok)} .chart .bar.fail{fill:var(--bad)}
+.chart .limit{stroke:var(--ink);stroke-width:1.5;stroke-dasharray:5 3}
+.chart .limtxt{font:600 11px var(--sans);fill:var(--ink)}
+.chart .ref{font:11px var(--sans);fill:var(--dim)}
+.chart .ref,.chart .limtxt{paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round}
+.gauge .zone.classical{fill:#dfe5ea}
+.gauge .zone.quantum{fill:#bfe6e3}
+.gauge .mark{stroke-width:3}
+.gauge .mark.pass{fill:var(--ok);stroke:var(--ok)} .gauge .mark.fail{fill:var(--bad);stroke:var(--bad)}
+.gauge .need{stroke:var(--warn);stroke-width:2}
+.gauge .lab{font:600 12px var(--sans);text-anchor:middle}
+.facts{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:4px 14px;margin:10px 0 0;font-size:14px}
+.facts dt{color:var(--dim)} .facts dd{margin:0;font-variant-numeric:tabular-nums}
+
+.timeline{list-style:none;margin:6px 0 0 6px;padding:0;border-left:2px solid var(--rule)}
+.ev{--k:#6b7a93;position:relative;padding:6px 0 8px 18px}
+.ev::before{content:"";position:absolute;left:-7px;top:13px;width:12px;height:12px;border-radius:50%;background:var(--k);border:2px solid var(--sheet)}
+.ev.k-ok{--k:var(--ok)} .ev.k-warn{--k:var(--warn)} .ev.k-bad{--k:var(--bad)} .ev.k-attack{--k:var(--laser)}
+.ev.k-attack::before{border-radius:1px;transform:rotate(45deg)}
+.ev-top{display:flex;justify-content:space-between;gap:12px}
+.ev .phase{color:var(--dim);font-size:12px;white-space:nowrap}
+.ev p{margin:2px 0 0;color:var(--dim);font-size:14px}
+.ev,.verdict p,.facts dd{overflow-wrap:anywhere}
+.ev.k-attack b{color:var(--laser)}
+
+/* controls */
+.col.controls label{display:block;font-size:13px;color:var(--dim);margin:12px 0 4px}
+fieldset{border:0;margin:14px 0 0;padding:0}
+legend{font:600 15px var(--serif);padding:0;margin-bottom:6px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);border:1px solid var(--ink);border-radius:3px;overflow:hidden}
+.seg label{margin:0;position:relative}
+.seg input{position:absolute;opacity:0;inset:0}
+.seg span{display:flex;align-items:center;justify-content:center;text-align:center;min-height:46px;padding:6px 4px;line-height:1.25;font-size:13px;font-weight:600;color:var(--ink);cursor:pointer;border-left:1px solid var(--ink)}
+.seg label:first-child span{border-left:0}
+.seg input:checked+span{background:var(--ink);color:#fff}
+.seg input:focus-visible+span{outline:2px solid var(--teal);outline-offset:-4px}
+.slider{display:grid;grid-template-columns:1fr auto;gap:0 8px;margin-top:10px}
+.col.controls .slider label{margin:0}
+.slider output{font-variant-numeric:tabular-nums;font-size:13px}
+.slider input{grid-column:1/-1;accent-color:var(--teal);width:100%}
+.check{display:flex!important;align-items:center;gap:8px;color:var(--ink)!important;font-size:14px!important}
+
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);max-width:min(560px,92vw);padding:10px 16px;border-radius:4px;background:var(--ink);color:#fff;opacity:0;pointer-events:none;transition:opacity .2s;z-index:9}
+#toast.show{opacity:1}
+#toast.bad{background:var(--bad)} #toast.warn{background:var(--warn)}
+
+@media (max-width:1150px){.layout{grid-template-columns:290px minmax(0,1fr)}.col.controls{grid-column:1/-1;border-left:0;border-top:1px solid var(--rule)}}
+@media (max-width:760px){.layout{grid-template-columns:1fr}.col+.col{border-left:0;border-top:1px solid var(--rule)}.col.stage{order:-1}.sendbar{grid-template-columns:1fr 1fr;align-items:stretch}.sendbar label{grid-column:1/-1}.cast-row{grid-template-columns:1fr 1fr}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header class="masthead">
+  <div>
+    <h1>QDS fallback lab</h1>
+    <p class="lede">Give users roles, let one of them attack, and see whether a quantum signature backed by entanglement still gets the message through.</p>
+  </div>
+  <span id="backendBadge" class="badge">Checking server…</span>
+</header>
+
+<main class="layout">
+  <section class="col users" aria-labelledby="usersH">
+    <h2 id="usersH">Users and roles</h2>
+    <form id="addForm" class="add" autocomplete="off">
+      <div><label class="sr" for="newName">Name</label><input id="newName" type="text" maxlength="14" placeholder="New user, e.g. Eve"></div>
+      <div><label class="sr" for="newRole">Role</label><select id="newRole"></select></div>
+      <button class="btn" type="submit">Add user</button>
+    </form>
+    <ul id="userList" class="users-list"></ul>
+    <button id="resetUsers" class="linkbtn" type="button">Reset to Alice, Bob, Charlie and Dave</button>
+    <details class="roles">
+      <summary>What each role does</summary>
+      <dl>
+        <dt>Sender</dt><dd>Signs the message and sends it.</dd>
+        <dt>Receiver</dt><dd>Checks the signature before accepting the message.</dd>
+        <dt>Validator</dt><dd>A second, independent checker. Without one, an attacker on the receiver's quantum link can fool the receiver.</dd>
+        <dt>Attacker</dt><dd>Interferes with the main route, the backup route or the entanglement link. Set the attack on the user.</dd>
+        <dt>Bystander</dt><dd>Sits in the network and does nothing.</dd>
+      </dl>
+    </details>
+  </section>
+
+  <section class="col stage" aria-label="Bench">
+    <div class="sendbar">
+      <label>Message from the sender<input id="message" type="text" maxlength="120"></label>
+      <button id="runBtn" class="btn primary" type="button">Run scenario</button>
+      <button id="cmpBtn" class="btn" type="button">Compare protection levels</button>
+    </div>
+    <div class="cast-row" id="castRow"></div>
+    <div class="bench"><svg id="net" viewBox="0 0 760 372" role="img" aria-label="Network diagram of the selected users"></svg></div>
+    <div class="legend" aria-hidden="true">
+      <span><i class="primary"></i>Main route (classical)</span>
+      <span><i class="quantum"></i>Quantum states</span>
+      <span><i class="backup"></i>Backup route and entangled pairs</span>
+    </div>
+    <div id="result" aria-live="polite"></div>
+    <div id="compare"></div>
+    <div id="metrics"></div>
+    <div id="logHead"></div>
+    <ol id="timeline" class="timeline"></ol>
+  </section>
+
+  <aside class="col controls" aria-labelledby="setH">
+    <h2 id="setH">Protection and parameters</h2>
+    <fieldset>
+      <legend>Protection level</legend>
+      <div class="seg" id="modeSeg">
+        <label><input type="radio" name="mode" value="plain"><span>None</span></label>
+        <label><input type="radio" name="mode" value="qds"><span>Signature</span></label>
+        <label><input type="radio" name="mode" value="hybrid"><span>Signature + fallback</span></label>
+      </div>
+      <small class="hint" id="modeHint"></small>
+    </fieldset>
+    <fieldset>
+      <legend>Quantum signature</legend>
+      <div id="slidersQds"></div>
+    </fieldset>
+    <fieldset>
+      <legend>Entanglement fallback</legend>
+      <div id="slidersEnt"></div>
+      <label for="backend">Bell-pair simulator</label>
+      <select id="backend">
+        <option value="auto">Automatic (Qiskit if installed)</option>
+        <option value="numpy">NumPy (built in)</option>
+        <option value="qiskit">Qiskit and Aer</option>
+      </select>
+      <small class="hint" id="backendHint">Qiskit is optional: pip install qiskit qiskit-aer</small>
+    </fieldset>
+    <label for="seed">Seed (leave empty for a different run every time)</label>
+    <input id="seed" type="number" min="0" step="1" placeholder="random">
+    <label class="check"><input type="checkbox" id="animate"> Animate the steps</label>
+  </aside>
+</main>
+<div id="toast" role="status" aria-live="polite"></div>
+<noscript><p style="padding:16px">This page needs JavaScript.</p></noscript>
+
+<script>
+(() => {
+"use strict";
+const $ = (sel, root = document) => root.querySelector(sel);
+const NS = "http://www.w3.org/2000/svg";
+
+function make(ns, tag, attrs, kids) {
+  const node = ns ? document.createElementNS(ns, tag) : document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === false || v == null) continue;
+    if (k === "text") node.textContent = v;
+    else if (k.startsWith("on") && typeof v === "function") node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v === true ? "" : String(v));
+  }
+  for (const kid of kids) if (kid != null) node.append(kid.nodeType ? kid : document.createTextNode(String(kid)));
+  return node;
+}
+const h = (tag, attrs, ...kids) => make(null, tag, attrs, kids.flat());
+const sv = (tag, attrs, ...kids) => make(NS, tag, attrs, kids.flat());
+
+const ROLES = ["sender", "receiver", "validator", "attacker", "bystander"];
+const ROLE_COLOR = {sender: "#2f6fd6", receiver: "#1f9a62", validator: "#7a4fc9", attacker: "#d3304a", bystander: "#7b8798"};
+const PRIMARY_LABEL = {pass: "Watch only", drop: "Block the message", forge: "Forge and replace", tamper: "Edit, keep the signature",
+  intercept_resend: "Intercept quantum states", eavesdrop_forge: "Intercept states, then forge"};
+const BACKUP_LABEL = {pass: "Leave alone", block: "Block", forge: "Swap the ciphertext"};
+const MODE_LABEL = {plain: "No protection", qds: "Signature only", hybrid: "Signature + fallback"};
+const MODE_HINT = {
+  plain: "The receiver accepts whatever arrives.",
+  qds: "The receiver checks a quantum signature. If it fails, nothing is delivered.",
+  hybrid: "If the signature fails, sender and receiver switch to a key made from entangled pairs."};
+const KIND_COLOR = {info: "#3b5b92", ok: "#1f8a5b", warn: "#a96a08", bad: "#c9283d", attack: "#d3304a"};
+const SLIDERS = {
+  qds: [
+    {key: "L", label: "Block length L", min: 16, max: 512, step: 16, fmt: v => v},
+    {key: "digest_bits", label: "Digest bits signed", min: 8, max: 64, step: 8, fmt: v => v},
+    {key: "s_a", label: "Receiver limit s_a", min: 0.02, max: 0.30, step: 0.01, fmt: v => v.toFixed(2)},
+    {key: "s_v", label: "Validator limit s_v", min: 0.05, max: 0.45, step: 0.01, fmt: v => v.toFixed(2)},
+    {key: "qds_noise", label: "Quantum channel noise", min: 0, max: 0.30, step: 0.01, fmt: v => Math.round(v * 100) + "%"}],
+  ent: [
+    {key: "ent_noise", label: "Entanglement noise", min: 0, max: 0.50, step: 0.01, fmt: v => Math.round(v * 100) + "%"}],
+};
+const STEP = 340;
+const KEY = "qdslab.v2";
+
+const defaultUsers = () => [
+  {name: "Alice", role: "sender"},
+  {name: "Bob", role: "receiver"},
+  {name: "Charlie", role: "attacker", primary: "forge", backup: "pass", tap_entanglement: false, forged_text: "Send all funds to Charlie"},
+  {name: "Dave", role: "validator"}];
+let state = {users: defaultUsers(), cast: {}, mode: "hybrid", message: "Meet at the lab at 5pm", settings: {},
+  animate: !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches), backend: "auto", seed: ""};
+let STATUS = null, timers = [], pos = {}, pktAnim = 0;
+
+function load() {
+  try { const o = JSON.parse(localStorage.getItem(KEY) || "null"); if (o && Array.isArray(o.users)) state = Object.assign(state, o); } catch (e) { /* private mode */ }
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignore */ } }
+
+function toast(msg, kind) {
+  const t = $("#toast"); t.textContent = msg; t.className = "show " + (kind || "");
+  clearTimeout(toast.t); toast.t = setTimeout(() => { t.className = ""; }, 5500);
+}
+function select(options, value, onchange, attrs) {
+  const el = h("select", attrs || {}, options.map(([v, label]) => h("option", {value: v, text: label})));
+  el.value = value == null ? "" : value;
+  el.addEventListener("change", () => onchange(el.value));
+  return el;
+}
+const CAST_ROLES = ["sender", "receiver", "validator", "attacker"];
+function ensureCast() {
+  for (const role of CAST_ROLES) {
+    if (state.cast[role] === "" && (role === "validator" || role === "attacker")) continue;   // explicit "none"
+    const pool = state.users.filter(u => u.role === role).map(u => u.name);
+    if (!pool.includes(state.cast[role])) state.cast[role] = pool[0] || null;
+  }
+}
+function attackerDefaults(u) {
+  u.primary = u.primary || "forge"; u.backup = u.backup || "pass";
+  u.tap_entanglement = !!u.tap_entanglement; u.forged_text = u.forged_text || ("Send all funds to " + u.name);
+}
+function afterUsersChanged() { ensureCast(); save(); renderUsers(); renderCast(); renderNetwork(); }
+
+/* ------------------------------------------------------------------ users */
+function attackerPanel(u) {
+  const P = STATUS ? STATUS.attacks.primary : {}, B = STATUS ? STATUS.attacks.backup : {};
+  const hint = h("small", {class: "hint", text: P[u.primary] || ""});
+  const bhint = h("small", {class: "hint", text: B[u.backup] || ""});
+  return h("div", {class: "atk"},
+    h("label", {}, "On the main route", select(Object.entries(PRIMARY_LABEL), u.primary, v => { u.primary = v; hint.textContent = P[v] || ""; save(); })), hint,
+    h("label", {}, "Fake message text", h("input", {type: "text", maxlength: "80", value: u.forged_text, oninput: e => { u.forged_text = e.target.value; save(); }})),
+    h("label", {}, "On the backup route", select(Object.entries(BACKUP_LABEL), u.backup, v => { u.backup = v; bhint.textContent = B[v] || ""; save(); })), bhint,
+    h("label", {class: "check"}, h("input", {type: "checkbox", checked: !!u.tap_entanglement, onchange: e => { u.tap_entanglement = e.target.checked; save(); }}), "Tap the entanglement link"));
+}
+function renderUsers() {
+  const ul = $("#userList"); ul.replaceChildren();
+  state.users.forEach((u, i) => {
+    if (u.role === "attacker") attackerDefaults(u);
+    const li = h("li", {class: "user"},
+      h("div", {class: "u-head"},
+        h("span", {class: "dot", style: "background:" + ROLE_COLOR[u.role]}),
+        h("strong", {text: u.name}),
+        select(ROLES.map(r => [r, r]), u.role, v => { u.role = v; afterUsersChanged(); }, {"aria-label": "Role of " + u.name}),
+        h("button", {class: "x", type: "button", title: "Remove " + u.name, "aria-label": "Remove " + u.name, text: "×",
+          onclick: () => { state.users.splice(i, 1); afterUsersChanged(); }})));
+    if (u.role === "attacker") li.append(attackerPanel(u));
+    ul.append(li);
+  });
+}
+function renderCast() {
+  const row = $("#castRow"); row.replaceChildren();
+  for (const [role, label, optional] of [["sender", "Sender", false], ["receiver", "Receiver", false], ["validator", "Validator", true], ["attacker", "Attacker", true]]) {
+    const pool = state.users.filter(u => u.role === role).map(u => [u.name, u.name]);
+    const opts = (optional ? [["", "none"]] : []).concat(pool);
+    if (!opts.length) opts.push(["", "give someone this role"]);
+    row.append(h("label", {class: "castsel", style: "--c:" + ROLE_COLOR[role]}, label,
+      select(opts, state.cast[role], v => { state.cast[role] = v; save(); renderNetwork(); }, {id: "cast-" + role})));
+  }
+}
+
+/* ------------------------------------------------------------------ network diagram */
+function layout() {
+  const c = state.cast, p = {};
+  const put = (name, x, y) => { if (name) p[name] = {x, y, big: true}; };
+  put(c.sender, 100, 190); put(c.receiver, 660, 190); put(c.attacker, 380, 100); put(c.validator, 380, 262);
+  state.users.filter(u => !(u.name in p)).slice(0, 9).forEach((u, i) => { p[u.name] = {x: 40 + i * 80, y: 28, big: false}; });
+  return p;
+}
+const compact = () => window.innerWidth < 760;
+function renderNetwork(active) {
+  active = active || [];
+  const svg = $("#net"); svg.replaceChildren();
+  pos = layout();
+  const c = state.cast, S = pos[c.sender], R = pos[c.receiver], A = pos[c.attacker], V = pos[c.validator];
+  const line = (a, b, cls, dy) => sv("line", {x1: a.x, y1: a.y + (dy || 0), x2: b.x, y2: b.y + (dy || 0), class: "link " + cls});
+  if (S && R) {
+    svg.append(line(S, R, "quantum", 10));
+    if (A) svg.append(line(S, A, "primary"), line(A, R, "primary")); else svg.append(line(S, R, "primary", -10));
+    svg.append(sv("path", {class: "link backup", d: `M ${S.x + 19} ${S.y + 19} Q ${(S.x + R.x) / 2} ${S.y + 268} ${R.x - 19} ${R.y + 19}`}));
+  }
+  if (S && V) svg.append(line(S, V, "quantum"));
+  for (const u of state.users) {
+    const p = pos[u.name]; if (!p) continue;
+    const r = p.big ? 26 : 12, k = compact() ? 1.5 : 1;
+    const g = sv("g", {class: "node" + (p.big ? "" : " small"), style: "--c:" + ROLE_COLOR[u.role], transform: `translate(${p.x} ${p.y})`});
+    if (active.includes(u.name)) g.append(sv("circle", {class: "halo", r: r + 8}));
+    g.append(sv("circle", {class: "body", r}));
+    if (p.big) g.append(sv("text", {class: "init", y: 7 * k, style: `font-size:${19 * k}px`, text: u.name[0].toUpperCase()}));
+    g.append(sv("text", {class: "nm", y: r + 17 * k, style: `font-size:${(p.big ? 14 : 12) * k}px`, text: u.name}));
+    if (p.big && k === 1) g.append(sv("text", {class: "rl", y: r + 32, text: u.role === "attacker" ? "attacker: " + (PRIMARY_LABEL[u.primary] || "").toLowerCase() : u.role}));
+    svg.append(g);
+  }
+  svg.append(sv("circle", {id: "pkt", r: 7, cx: 0, cy: 0, fill: "#3b5b92"}));
+}
+function movePacket(from, to, kind) {
+  const a = pos[from], b = pos[to], pkt = $("#pkt");
+  if (!a || !b || !pkt) return;
+  const t0 = performance.now(), dur = Math.max(160, STEP - 70);
+  pkt.setAttribute("fill", KIND_COLOR[kind] || KIND_COLOR.info); pkt.style.opacity = 1;
+  cancelAnimationFrame(pktAnim);
+  const tick = now => {
+    const k = Math.min(1, (now - t0) / dur);
+    pkt.setAttribute("cx", a.x + (b.x - a.x) * k); pkt.setAttribute("cy", a.y + (b.y - a.y) * k);
+    if (k < 1) pktAnim = requestAnimationFrame(tick);
+  };
+  pktAnim = requestAnimationFrame(tick);
+}
+
+/* ------------------------------------------------------------------ results */
+const fmtOdds = l => l <= -9999 ? "effectively zero" : l > -0.5 ? "likely" : "about 1 in 10^" + Math.round(-l);
+const pct = v => (100 * v).toFixed(1) + "%";
+function facts(items) { return h("dl", {class: "facts"}, items.flatMap(([k, v]) => [h("dt", {text: k}), h("dd", {text: String(v)})])); }
+
+function barChart(title, caption, rates, limit, limitName) {
+  const W = 640, H = 172, L0 = 40, R0 = 8, T0 = 12, B0 = 24, maxY = 0.6;
+  const y = v => T0 + (1 - Math.min(v, maxY) / maxY) * (H - T0 - B0);
+  const n = rates.length, bw = (W - L0 - R0) / n;
+  const svg = sv("svg", {viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": title});
+  for (const v of [0, 0.25, 0.5]) svg.append(sv("line", {x1: L0, x2: W - R0, y1: y(v), y2: y(v), class: "grid"}), sv("text", {x: L0 - 6, y: y(v) + 4, class: "tick", "text-anchor": "end", text: v.toFixed(2)}));
+  rates.forEach((r, i) => svg.append(sv("rect", {x: L0 + i * bw + 1, width: Math.max(bw - 2, 1), y: y(r), height: Math.max(H - B0 - y(r), 1), class: "bar " + (r < limit ? "pass" : "fail")})));
+  svg.append(sv("line", {x1: L0, x2: W - R0, y1: y(limit), y2: y(limit), class: "limit"}),
+    sv("text", {x: L0 + 4, y: y(0.25) - 4, class: "ref", text: "disturbed quantum link ≈ 0.25"}), sv("text", {x: L0 + 4, y: y(0.5) - 4, class: "ref", text: "blind guess ≈ 0.50"}),
+    sv("text", {x: W - R0, y: y(limit) - 4, class: "limtxt", "text-anchor": "end", text: `${limitName} = ${limit.toFixed(2)}`}),
+    sv("text", {x: L0, y: H - 7, class: "tick", text: "first digest bit"}), sv("text", {x: W - R0, y: H - 7, class: "tick", "text-anchor": "end", text: "last digest bit"}));
+  return h("figure", {class: "fig"}, h("figcaption", {}, h("strong", {text: title}), h("span", {text: caption})), svg);
+}
+function gauge(f) {
+  const W = 640, H = 92, L0 = 16, R0 = 16, X = v => L0 + (Math.max(0, Math.min(v, 3)) / 3) * (W - L0 - R0);
+  const ok = f.secure, svg = sv("svg", {viewBox: `0 0 ${W} ${H}`, class: "chart gauge", role: "img", "aria-label": "CHSH value " + f.S});
+  svg.append(
+    sv("rect", {class: "zone classical", x: X(0), y: 30, width: X(2) - X(0), height: 20}),
+    sv("rect", {class: "zone quantum", x: X(2), y: 30, width: X(2 * Math.SQRT2) - X(2), height: 20}),
+    sv("text", {class: "tick", x: X(0), y: 70, text: "up to 2: classical physics can reach this"}),
+    sv("text", {class: "tick", x: X(3), y: 70, "text-anchor": "end", text: "2 to 2.83: needs entanglement"}),
+    sv("line", {class: "need", x1: X(f.chsh_min), x2: X(f.chsh_min), y1: 26, y2: 54}),
+    sv("text", {class: "tick", x: X(f.chsh_min), y: 86, "text-anchor": "middle", text: "required: above " + f.chsh_min}),
+    sv("line", {class: "mark " + (ok ? "pass" : "fail"), x1: X(f.S), x2: X(f.S), y1: 20, y2: 56}),
+    sv("text", {class: "lab", x: X(f.S), y: 14, fill: ok ? "#1f8a5b" : "#c9283d", text: "measured S = " + f.S.toFixed(2)}));
+  return h("figure", {class: "fig"}, h("figcaption", {}, h("strong", {text: "Are the entangled pairs really entangled? (CHSH test)"}),
+    h("span", {text: "Above 2 means the pairs behave in a way no classical eavesdropper can fake."})), svg);
+}
+function showVerdict(res) {
+  $("#result").replaceChildren(h("div", {class: "verdict lvl-" + res.level},
+    h("h3", {text: res.headline}), h("p", {text: res.explanation}),
+    h("p", {class: "received"}, res.cast.receiver + " ended up with: ", h("q", {text: res.accepted_text == null ? "nothing" : res.accepted_text}))));
+}
+function showMetrics(res) {
+  const box = $("#metrics"); box.replaceChildren();
+  const q = res.metrics.qds, f = res.metrics.fallback;
+  if (!q && !f) return;
+  box.append(h("h3", {text: "What the checks saw"}));
+  if (q) {
+    if (q.bob) box.append(barChart(res.cast.receiver + "'s check: mismatch per signed digest bit", "Bars under the limit pass. Honest signatures sit near the channel noise.", q.bob.rates, q.s_a, "s_a"));
+    if (q.validator) box.append(barChart(res.cast.validator + "'s independent check", "The validator measured its own copy of the quantum states.", q.validator.rates, q.s_v, "s_v"));
+    box.append(facts([["Qubits sent to each recipient", q.qubits_per_recipient.toLocaleString()],
+      ["Blind forgery passes one block", fmtOdds(q.forgery_log10_block)],
+      ["Fake message passes (forger holds one genuine signature)", fmtOdds(q.forgery_log10_message)],
+      ["Honest signature wrongly refused", fmtOdds(q.false_reject_log10)]]));
+  }
+  if (f) {
+    box.append(gauge(f));
+    box.append(facts([["Bell-pair simulator", f.backend_detail], ["Pairs measured", f.pairs.toLocaleString()],
+      ["Key-sample error rate", pct(f.qber) + " (limit " + pct(f.qber_max) + ")"],
+      ["Secret key bits", f.key_bits + " of " + f.needed_key_bits + " needed"],
+      ["One-time MAC", f.mac_ok == null ? "not reached" : (f.mac_ok ? "verified" : "failed")]]));
+  }
+}
+function eventItem(ev) {
+  return h("li", {class: "ev k-" + ev.kind}, h("div", {class: "ev-top"}, h("b", {text: ev.title}), h("span", {class: "phase", text: ev.phase})), ev.detail ? h("p", {text: ev.detail}) : null);
+}
+function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+function show(res, instant) {
+  clearTimers();
+  const list = $("#timeline"); list.replaceChildren();
+  $("#result").replaceChildren(); $("#metrics").replaceChildren();
+  $("#logHead").replaceChildren(h("h3", {text: "Step by step"}));
+  const quick = instant || !state.animate;
+  const finish = () => { renderNetwork(); showVerdict(res); showMetrics(res); };
+  res.events.forEach((ev, i) => {
+    const add = () => {
+      list.append(eventItem(ev));
+      if (!quick) { renderNetwork([ev.from, ev.to].filter(Boolean)); if (ev.from && ev.to) movePacket(ev.from, ev.to, ev.kind); }
+    };
+    if (quick) add(); else timers.push(setTimeout(add, i * STEP));
+  });
+  if (quick) finish(); else timers.push(setTimeout(finish, res.events.length * STEP + 120));
+}
+function showCompare(data) {
+  const box = $("#compare"); box.replaceChildren();
+  box.append(h("h3", {text: "Same scenario, three protection levels"}),
+    h("table", {class: "cmp"},
+      h("thead", {}, h("tr", {}, h("th", {text: "Protection"}), h("th", {text: "Outcome"}), h("th", {text: "Receiver ended up with"}))),
+      h("tbody", {}, data.order.map(m => { const r = data.results[m];
+        return h("tr", {class: "lvl-" + r.level},
+          h("td", {}, h("button", {class: "rowbtn", type: "button", onclick: () => { state.mode = m; setMode(); show(r, true); }}, MODE_LABEL[m])),
+          h("td", {class: "out", text: r.headline}), h("td", {}, h("q", {text: r.accepted_text == null ? "nothing" : r.accepted_text}))); }))),
+    h("small", {class: "hint", text: "Select a protection level to open its step-by-step log."}));
+}
+
+/* ------------------------------------------------------------------ talking to the server */
+async function post(url, body) {
+  const r = await fetch(url, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(typeof data.detail === "string" ? data.detail : "The server could not run this scenario (" + r.status + ").");
+  return data;
+}
+function payload() {
+  const atk = state.users.find(u => u.role === "attacker" && u.name === state.cast.attacker);
+  return {
+    message: $("#message").value, mode: state.mode, sender: state.cast.sender, receiver: state.cast.receiver,
+    validator: state.cast.validator || null,
+    attacker: atk ? {name: atk.name, primary: atk.primary, backup: atk.backup, tap_entanglement: !!atk.tap_entanglement, forged_text: atk.forged_text} : null,
+    settings: Object.assign({}, state.settings, {backend: $("#backend").value, seed: $("#seed").value === "" ? null : Number($("#seed").value), pairs: null}),
+  };
+}
+function ready() {
+  if (!STATUS) { toast("The server is not reachable. Start it with: python run.py", "bad"); return false; }
+  if (!state.cast.sender || !state.cast.receiver) { toast("Give someone the sender role and someone the receiver role first.", "warn"); return false; }
+  return true;
+}
+let runToken = 0;
+function setBusy(on) {
+  const b = $("#runBtn"), c = $("#cmpBtn");
+  b.disabled = c.disabled = on; b.textContent = on ? "Running…" : "Run scenario";
+}
+function startRun() {   // clear the previous outcome so a stale verdict is never mistaken for the new one
+  clearTimers(); setBusy(true);
+  $("#result").replaceChildren(h("p", {class: "idle", text: "Running…"}));
+  $("#metrics").replaceChildren(); $("#timeline").replaceChildren(); $("#logHead").replaceChildren();
+  return ++runToken;
+}
+async function run() {
+  if (!ready()) return;
+  const token = startRun();
+  try { const res = await post("/api/run", payload()); if (token !== runToken) return; $("#compare").replaceChildren(); show(res); }
+  catch (e) { if (token === runToken) { toast(e.message, "bad"); renderIdle(); } }
+  finally { if (token === runToken) setBusy(false); }
+}
+async function compare() {
+  if (!ready()) return;
+  const token = startRun();
+  try {
+    const data = await post("/api/compare", payload());
+    if (token !== runToken) return;
+    showCompare(data); show(data.results[state.mode] || data.results.hybrid, true);
+  } catch (e) { if (token === runToken) { toast(e.message, "bad"); renderIdle(); } }
+  finally { if (token === runToken) setBusy(false); }
+}
+
+/* ------------------------------------------------------------------ controls */
+function buildSliders() {
+  for (const [group, target] of [["qds", "#slidersQds"], ["ent", "#slidersEnt"]]) {
+    const box = $(target); box.replaceChildren();
+    for (const d of SLIDERS[group]) {
+      const id = "s-" + d.key, cur = Number(state.settings[d.key]);
+      const out = h("output", {for: id, text: d.fmt(cur)});
+      box.append(h("div", {class: "slider"}, h("label", {for: id, text: d.label}), out,
+        h("input", {id, type: "range", min: d.min, max: d.max, step: d.step, value: cur, oninput: e => {
+          state.settings[d.key] = Number(e.target.value); out.textContent = d.fmt(Number(e.target.value)); save(); }})));
+    }
+  }
+}
+function setMode() {
+  for (const r of document.querySelectorAll("input[name=mode]")) r.checked = r.value === state.mode;
+  $("#modeHint").textContent = MODE_HINT[state.mode]; save();
+}
+function renderIdle() {
+  const c = state.cast;
+  $("#result").replaceChildren(h("p", {class: "idle", text: c.sender && c.receiver
+    ? `Nothing has run yet. Press “Run scenario” and watch ${c.sender} send a message to ${c.receiver}` + (c.attacker ? `, with ${c.attacker} trying to interfere.` : ".")
+    : "Add users on the left and give them the sender and receiver roles to begin."}));
+}
+function renderBadge() {
+  const b = $("#backendBadge"), q = STATUS.backends.qiskit;
+  b.textContent = q.available ? "Bell pairs: " + q.detail : "Bell pairs: NumPy (Qiskit not installed)";
+  b.className = "badge" + (q.available ? " ok" : "");
+  $("#backendHint").textContent = q.available ? "Qiskit is installed and ready." : "Qiskit is optional: pip install qiskit qiskit-aer. Without it the built-in NumPy model is used.";
+}
+
+async function init() {
+  load();
+  $("#newRole").replaceChildren(...ROLES.map(r => h("option", {value: r, text: r})));
+  $("#message").value = state.message; $("#backend").value = state.backend; $("#seed").value = state.seed; $("#animate").checked = state.animate;
+  try {
+    const r = await fetch("/api/status"); if (!r.ok) throw new Error("status " + r.status);
+    STATUS = await r.json();
+    state.settings = Object.assign({}, STATUS.defaults, state.settings);
+    renderBadge();
+  } catch (e) {
+    $("#backendBadge").textContent = "Server not reachable";
+    state.settings = Object.assign({L: 256, digest_bits: 32, s_a: 0.10, s_v: 0.20, qds_noise: 0.02, ent_noise: 0.03}, state.settings);
+    toast("Cannot reach the server. Start it with “python run.py” and open the address it prints (do not open this file directly).", "bad");
+  }
+  buildSliders(); setMode(); ensureCast(); renderUsers(); renderCast(); renderNetwork(); renderIdle();
+
+  $("#addForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const name = $("#newName").value.trim(), role = $("#newRole").value;
+    if (!name) return toast("Type a name for the new user first.", "warn");
+    if (state.users.some(u => u.name.toLowerCase() === name.toLowerCase())) return toast(name + " already exists. Pick a different name.", "warn");
+    const u = {name, role}; if (role === "attacker") attackerDefaults(u);
+    state.users.push(u); $("#newName").value = ""; afterUsersChanged();
+  });
+  $("#resetUsers").addEventListener("click", () => { state.users = defaultUsers(); state.cast = {}; afterUsersChanged(); renderIdle(); });
+  $("#runBtn").addEventListener("click", run);
+  $("#cmpBtn").addEventListener("click", compare);
+  $("#message").addEventListener("input", e => { state.message = e.target.value; save(); });
+  $("#message").addEventListener("keydown", e => { if (e.key === "Enter") run(); });
+  $("#backend").addEventListener("change", e => { state.backend = e.target.value; save(); });
+  $("#seed").addEventListener("input", e => { state.seed = e.target.value; save(); });
+  $("#animate").addEventListener("change", e => { state.animate = e.target.checked; save(); });
+  let wasCompact = compact();
+  window.addEventListener("resize", () => { if (compact() !== wasCompact) { wasCompact = compact(); renderNetwork(); } });
+  for (const r of document.querySelectorAll("input[name=mode]")) r.addEventListener("change", () => { state.mode = r.value; setMode(); });
+}
+init();
+})();
+</script>
+</body>
+</html>
