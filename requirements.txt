@@ -1,0 +1,4 @@
+# Core (required): the simulation, the API server and the web UI.
+numpy>=1.24
+fastapi>=0.100
+uvicorn>=0.23

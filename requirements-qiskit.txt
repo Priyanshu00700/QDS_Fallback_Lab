@@ -1,0 +1,3 @@
+# Optional: run the Bell-pair fallback on real Qiskit circuits instead of the built-in NumPy model.
+qiskit>=1.0
+qiskit-aer>=0.14
